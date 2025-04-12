@@ -166,7 +166,7 @@ class SmRemote(object):
         except requests.RequestException as e:
             return str(e)
 
-    def sm4_cbc_enc_internal_remote(self, data: str, iv: str) -> str:
+    def sm4_cbc_enc_internal_remote(self, data: str, iv: str) -> list[str]:
 
         if self.enc_token == "":
             self.get_2_tokens(self.enc_user_info, self.sign_user_info)
@@ -197,18 +197,18 @@ class SmRemote(object):
                 code = str(json_data["code"])
                 if status == "200":
                     outData = str(json_data["result"]["outData"])
-                    return outData
+                    iv = str(json_data["result"]["iv"])
+                    return [1, outData, iv]
                 elif status == "500" and code == "00000002":
                     self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.sm4_ecb_enc_internal_remote(data)
+                    return self.sm4_cbc_enc_internal_remote(data)
                 else:
                     message = str(json_data["message"])
-                    return message
+                    return [0, message]
             else:
-                return str(response.status_code)
+                return [0, str(response.status_code)]
         except requests.RequestException as e:
-            return str(e)
-
+            return [0, str(e), ""]
 
     def sm4_cbd_dec_internal_remote(self, data: str, iv: str) -> str:
         if self.enc_token == "":
@@ -226,7 +226,7 @@ class SmRemote(object):
 
         request_json_data = {
             "keyName": self.enc_internal_key_name,
-            "algType": "SGD_SM4_ECB",
+            "algType": "SGD_SM4_CBC",
             "iv": iv,
             "inData": data,
             "paddingType": "PKCS7PADDING"
@@ -258,7 +258,15 @@ if __name__ == "__main__":
     print(cipher_text)
     plain_text = sr.sm4_ecb_dec_internal_remote(cipher_text)
     print(plain_text)
-    cipher_text = sr.sm4_cbc_enc_internal_remote("hello world", "0011223344556677")
-    print(cipher_text)
+    rst = sr.sm4_cbc_enc_internal_remote("wangning", "QQSS##FFGG&&HHQQ")
+    if rst[0]:
+        cipher_text = rst[1]
+        iv = rst[2]
+        print(cipher_text)
+        print(iv)
+    else:
+        print(rst[1])
+
+
 
 
