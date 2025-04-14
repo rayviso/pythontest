@@ -39,10 +39,25 @@ class MyConverter(object):
     def string_to_hex(string):
         return string.encode().hex()
 
+    # string -> hex
+    @staticmethod
+    def string_to_hex_with_space(string):
+        return ' '.join(f"{b:02x}" for b in string.encode())
+
+    # bytes -> string
+    @staticmethod
+    def bytes_to_string_windows1252(bytes):
+        return bytes.decode("windows-1252")
+
+    # bytes -> string
+    @staticmethod
+    def bytes_to_string_latin1(bytes):
+        return bytes.decode("latin-1")
+
     # bytes -> string
     @staticmethod
     def bytes_to_string_utf8(bytes):
-        return bytes.decode()
+        return bytes.decode("utf8")
 
     # bytes -> string
     @staticmethod
@@ -63,6 +78,11 @@ class MyConverter(object):
     @staticmethod
     def bytes_to_hex(bytes):
         return bytes.hex()
+
+    # bytes -> hex
+    @staticmethod
+    def bytes_to_hex_with_space(bytes):
+        return ' '.join(f"{b:02x}" for b in bytes)
 
     # base64 -> hex
     @staticmethod

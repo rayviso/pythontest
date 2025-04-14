@@ -1,272 +1,57 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 from Common.Base import MyConverter
-import requests
-import json
-
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
-
-class SmRemote(object):
-
-    def __init__(self):
-        self.enc_token = ""
-        self.sign_token = ""
-
-        self.base_url = "https://101.91.108.14:8867"
-
-        self.enc_app_code = "encrypt"
-        self.enc_tenant_code = "zqyl"
-        self.sign_app_code = "sign"
-        self.sign_tenant_code = "zqyl"
-        self.enc_internal_key_name = "sk_encrypt_sm4"
-
-        self.enc_user_info = {
-            "username": "zqyl@encrypt",
-            "password": "1234Jjm!@"
-        }
-
-        self.sign_user_info = {
-            "username": "zqyl@sign",
-            "password": "1234Jjm!@"
-        }
-
-        self.token_url = "/ccsp/auth/app/v1/token"
-        self.token_full_url = self.base_url + self.token_url
-
-        self.sm4_enc_internal_url = "/pki/api/v6/encrypt/internal/symmetric"
-        self.sm4_enc_internal_full_url = self.base_url + self.sm4_enc_internal_url
-
-        self.sm4_dec_internal_url = "/pki/api/v6/decrypt/internal/symmetric"
-        self.sm4_dec_internal_full_url = self.base_url + self.sm4_dec_internal_url
-
-        self.sm4_enc_external_url = "/pki/api/v6/encrypt/external/symmetric"
-        self.sm4_enc_external_full_url = self.base_url + self.sm4_enc_external_url
-
-        self.sm4_dec_external_url = "/pki/api/v6/decrypt/external/symmetric"
-        self.sm4_dec_external_full_url = self.base_url + self.sm4_dec_external_url
+from Common.Sm import MySmRemote, MySm
 
 
 
-    def token(self, request_json_data: dict) -> str:
+def gm_base_enc_test():
+    gmr = MySmRemote()
 
-        request_headers = {
-            "Content-Type": "application/json",
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache",
-            "Accept-Encoding": "gzip, deflate, br"
-        }
+    # 调用远程restful api进行sm4 ecb加解密（内部key）
+    message1 = "Hello World"
+    print(f"ECB内部Key 加密原始数据为 [{message1}]")
+    message_cipher = gmr.remote_internal_enc_sm4_ecb(message1)
+    print(f"ECB内部Key 加密后数据为 [{message_cipher}]")
+    message_plain = gmr.remote_internal_dec_sm4_ecb(message_cipher)
+    print(f"ECB内部Key 解密后数据为 [{message_plain}]")
 
-        try:
-            response = requests.post(self.token_full_url, headers=request_headers, json=request_json_data, verify=False)
-            if response.status_code == 200:
-                json_data = json.loads(json.dumps(response.json()))
-                status = str(json_data["status"])
-                if status == "0":
-                    token = str(json_data["data"]["accessToken"])
-                    return token
-                else:
-                    message = str(json_data["message"])
-                    return message
-            else:
-                return str(response.status_code)
-        except requests.RequestException as e:
-            return str(e)
+    # 调用远程restful api进行sm4 cbc加解密（内部key）
+    message2 = "Hello World"
+    iv2 = MySm.random_bytes16()
+    print(f"CBC内部Key 加密原始数据为 [{message2}], 加密初始向量iv为 [{iv2.hex()}]")
+    cipher_text = gmr.remote_internal_enc_sm4_cbc(message2, iv2)
+    print(f"CBC内部Key 加密后数据为 [{cipher_text}]")
+    plain_text = gmr.remote_internal_dec_sm4_cbc(cipher_text, iv2)
+    print(f"CBC内部Key 解密后数据为 [{plain_text}]")
 
-    def get_2_tokens(self, enc_user_info: dict, sign_user_info: dict):
-        self.enc_token = self.token(enc_user_info)
-        self.sign_token = self.token(sign_user_info)
-        # print(global_enc_token)
-        # print(global_sign_token)
+    # 调用远程restful api进行sm4 ecb加解密
+    message3 = "Hello World"
+    key3 = MySm.random_bytes16()
+    print(f"ECB外部Key 加密原始数据为 [{message3}], 加密Key为 [{key3.hex()}]")
+    message_cipher = gmr.remote_external_enc_sm4_ecb(message3, key3)
+    print(f"ECB外部Key 加密后数据为 [{message_cipher}]")
+    message_plain = gmr.remote_external_dec_sm4_ecb(message_cipher, key3)
+    print(f"ECB外部Key 解密后数据为 [{message_plain}]")
 
-    def sm4_ecb_enc_internal_remote(self, data: str) -> str:
+    # 调用远程restful api进行sm4 cbc加解密
+    message4 = "Hello World"
+    key4 = MySm.random_bytes16()
+    iv4 = MySm.random_bytes16()
+    print(f"CBC外部Key 加密原始数据为 [{message4}], 加密Key为 [{key4.hex()}], 加密初始向量iv为 [{iv4.hex()}]")
+    message_cipher = gmr.remote_external_enc_sm4_cbc(message4.encode(), key4, iv4)
+    print(f"CBC外部Key 加密后数据为 [{message_cipher}]")
+    message_plain = gmr.remote_external_dec_sm4_cbc(message_cipher, key4, iv4)
+    print(f"CBC外部Key 解密后数据为 [{message_plain}]")
 
-        if self.enc_token == "":
-            self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-
-        request_headers = {
-            "Content-Type": "application/json",
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache",
-            "Accept-Encoding": "gzip, deflate, br",
-            "X-SW-Authorization-Token": self.enc_token,
-            "X-SW-Authorization-TenantCode": self.enc_tenant_code,
-            "X-SW-Authorization-AppCode": self.enc_app_code
-        }
-
-        request_json_data = {
-            "keyName": self.enc_internal_key_name,
-            "algType": "SGD_SM4_ECB",
-            "iv": "",
-            "inData": MyConverter.string_to_base64(data),
-            "paddingType": "PKCS7PADDING"
-        }
-
-        try:
-            response = requests.post(self.sm4_enc_internal_full_url, headers=request_headers, json=request_json_data, verify=False)
-            if response.status_code == 200:
-                json_data = json.loads(json.dumps(response.json()))
-                status = str(json_data["status"])
-                code = str(json_data["code"])
-                if status == "200":
-                    outData = str(json_data["result"]["outData"])
-                    return outData
-                elif status == "500" and code == "00000002":
-                    self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.sm4_ecb_enc_internal_remote(data)
-                else:
-                    message = str(json_data["message"])
-                    return message
-            else:
-                return str(response.status_code)
-        except requests.RequestException as e:
-            return str(e)
-
-    def sm4_ecb_dec_internal_remote(self, data: str) -> str:
-        if self.enc_token == "":
-            self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-
-        request_headers = {
-            "Content-Type": "application/json",
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache",
-            "Accept-Encoding": "gzip, deflate, br",
-            "X-SW-Authorization-Token": self.enc_token,
-            "X-SW-Authorization-TenantCode": self.enc_tenant_code,
-            "X-SW-Authorization-AppCode": self.enc_app_code
-        }
-
-        request_json_data = {
-            "keyName": self.enc_internal_key_name,
-            "algType": "SGD_SM4_ECB",
-            "inData": data,
-            "paddingType": "PKCS7PADDING"
-        }
-
-        try:
-            response = requests.post(self.sm4_dec_internal_full_url, headers=request_headers, json=request_json_data, verify=False)
-            if response.status_code == 200:
-                json_data = json.loads(json.dumps(response.json()))
-                status = str(json_data["status"])
-                code = str(json_data["code"])
-                if status == "200":
-                    outData = str(json_data["result"]["outData"])
-                    return MyConverter.base64_to_string(outData)
-                elif status == "500" and code == "00000002":
-                    self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.sm4_ecb_enc_internal_remote(data)
-                else:
-                    message = str(json_data["message"])
-                    return message
-            else:
-                return str(response.status_code)
-        except requests.RequestException as e:
-            return str(e)
-
-    def sm4_cbc_enc_internal_remote(self, data: str, iv: str) -> list[str]:
-
-        if self.enc_token == "":
-            self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-
-        request_headers = {
-            "Content-Type": "application/json",
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache",
-            "Accept-Encoding": "gzip, deflate, br",
-            "X-SW-Authorization-Token": self.enc_token,
-            "X-SW-Authorization-TenantCode": self.enc_tenant_code,
-            "X-SW-Authorization-AppCode": self.enc_app_code
-        }
-
-        request_json_data = {
-            "keyName": self.enc_internal_key_name,
-            "algType": "SGD_SM4_CBC",
-            "iv": MyConverter.string_to_base64(iv),
-            "inData": MyConverter.string_to_base64(data),
-            "paddingType": "PKCS7PADDING"
-        }
-
-        try:
-            response = requests.post(self.sm4_enc_internal_full_url, headers=request_headers, json=request_json_data, verify=False)
-            if response.status_code == 200:
-                json_data = json.loads(json.dumps(response.json()))
-                status = str(json_data["status"])
-                code = str(json_data["code"])
-                if status == "200":
-                    outData = str(json_data["result"]["outData"])
-                    iv = str(json_data["result"]["iv"])
-                    return [1, outData, iv]
-                elif status == "500" and code == "00000002":
-                    self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.sm4_cbc_enc_internal_remote(data)
-                else:
-                    message = str(json_data["message"])
-                    return [0, message]
-            else:
-                return [0, str(response.status_code)]
-        except requests.RequestException as e:
-            return [0, str(e), ""]
-
-    def sm4_cbd_dec_internal_remote(self, data: str, iv: str) -> str:
-        if self.enc_token == "":
-            self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-
-        request_headers = {
-            "Content-Type": "application/json",
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache",
-            "Accept-Encoding": "gzip, deflate, br",
-            "X-SW-Authorization-Token": self.enc_token,
-            "X-SW-Authorization-TenantCode": self.enc_tenant_code,
-            "X-SW-Authorization-AppCode": self.enc_app_code
-        }
-
-        request_json_data = {
-            "keyName": self.enc_internal_key_name,
-            "algType": "SGD_SM4_CBC",
-            "iv": iv,
-            "inData": data,
-            "paddingType": "PKCS7PADDING"
-        }
-
-        try:
-            response = requests.post(self.sm4_dec_internal_full_url, headers=request_headers, json=request_json_data, verify=False)
-            if response.status_code == 200:
-                json_data = json.loads(json.dumps(response.json()))
-                status = str(json_data["status"])
-                code = str(json_data["code"])
-                if status == "200":
-                    outData = str(json_data["result"]["outData"])
-                    return MyConverter.base64_to_string(outData)
-                elif status == "500" and code == "00000002":
-                    self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.sm4_ecb_enc_internal_remote(data)
-                else:
-                    message = str(json_data["message"])
-                    return message
-            else:
-                return str(response.status_code)
-        except requests.RequestException as e:
-            return str(e)
+    # 调用本地gmssl lib进行sm4 cbd加解密
+    message_cipher_local = MySm.sm4_cbc_enc(message4, key4, iv4)
+    print(f"GMSSL CBC加密相同数据后的加密值为 [{message_cipher_local}]")
+    message_plain_local = MySm.sm4_cbc_dec(message_cipher_local, key4, iv4)
+    print(f"GMSSL CBC解密后数据为 [{message_plain_local}]")
 
 if __name__ == "__main__":
-    sr = SmRemote()
-    cipher_text = sr.sm4_ecb_enc_internal_remote("hello world")
-    print(cipher_text)
-    plain_text = sr.sm4_ecb_dec_internal_remote(cipher_text)
-    print(plain_text)
-    rst = sr.sm4_cbc_enc_internal_remote("wangning", "QQSS##FFGG&&HHQQ")
-    if rst[0]:
-        cipher_text = rst[1]
-        iv = rst[2]
-        print(cipher_text)
-        print(iv)
-    else:
-        print(rst[1])
-
+    gm_base_enc_test()
 
 
 
