@@ -173,8 +173,9 @@ class MySm(object):
 
     # TODO SM3
     @staticmethod
-    def sm3_digest():
+    def sm3_digest_bytes(data: str):
         sm3 = Sm3()
+        sm3.update(data.encode())
         return sm3.digest()
 
     @staticmethod
@@ -184,36 +185,35 @@ class MySm(object):
         return sm3.digest().hex()
 
     @staticmethod
-    def sm3_digest_base64(string):
+    def sm3_digest_base64(data: str) -> str:
         sm3 = Sm3()
-        sm3.update(string.encode("utf-8"))
+        sm3.update(data.encode("utf-8"))
         return base64.b64encode(sm3.digest()).decode("utf-8")
 
     @staticmethod
-    def sm3_hmac_digest_hex(string):
+    def sm3_hmac_digest_hex(data: str) -> str:
         key = rand_bytes(SM3_HMAC_MIN_KEY_SIZE)
         sm3_hmac = Sm3Hmac(key)
-        sm3_hmac.update(string.encode("utf-8"))
+        sm3_hmac.update(data.encode("utf-8"))
         return sm3_hmac.generate_mac().hex()
 
-
     @staticmethod
-    def sm3_hmac_digest_base64(string):
+    def sm3_hmac_digest_base64(data: str):
         key = rand_bytes(SM3_HMAC_MIN_KEY_SIZE)
         sm3_hmac = Sm3Hmac(key)
-        sm3_hmac.update(string.encode("utf-8"))
+        sm3_hmac.update(data.encode("utf-8"))
         return base64.b64encode(sm3_hmac.generate_mac()).decode("utf-8")
 
     @staticmethod
-    def sm3_hmac_digest_with_key_hex(string, key):
+    def sm3_hmac_digest_with_key_hex(data: str, key: bytes) -> str:
         sm3_hmac = Sm3Hmac(key)
-        sm3_hmac.update(string.encode("utf-8"))
+        sm3_hmac.update(data.encode("utf-8"))
         return sm3_hmac.generate_mac().hex()
 
     @staticmethod
-    def sm3_hmac_digest_with_key_base64(string, key):
+    def sm3_hmac_digest_with_key_base64(data: str, key: bytes) -> str:
         sm3_hmac = Sm3Hmac(key)
-        sm3_hmac.update(string.encode("utf-8"))
+        sm3_hmac.update(data.encode("utf-8"))
         return base64.b64encode(sm3_hmac.generate_mac()).decode("utf-8")
 
     # TODO SM4
@@ -243,7 +243,6 @@ class MySm(object):
     @staticmethod
     def random_bytes32():
         return rand_bytes(32)
-
 
 
 class MySmRemote(object):
@@ -284,7 +283,6 @@ class MySmRemote(object):
 
         self.sm4_dec_external_url = "/pki/api/v6/decrypt/external/symmetric"
         self.sm4_dec_external_full_url = self.base_url + self.sm4_dec_external_url
-
 
     def token(self, request_json_data: dict) -> str:
 

@@ -51,7 +51,14 @@ def gm_base_enc_test():
     print(f"GMSSL CBC解密后数据为 [{message_plain_local}]")
 
 if __name__ == "__main__":
-    gm_base_enc_test()
+    # gm_base_enc_test()
+    message = "Hello World"
+    # key = MySm.random_bytes32()
+    # print(key.hex())
+    fix_key = "10f9f482d075ea0438dd56e739444930920bcc16742016fb8f84dfab3f7f84c6"
+    print(MySm.sm3_hmac_digest_with_key_hex(message, MyConverter.hex_to_base64(fix_key)))
+
+    print(MySm.sm3_digest_bytes("Hello World").hex())
 
 
 
