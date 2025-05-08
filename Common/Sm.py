@@ -16,7 +16,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 # 或者禁用所有 urllib3 警告
 # requests.packages.urllib3.disable_warnings()
 
-
+# 用来实现MySm类中的相关功能而定义
 class MySM2PublicKeyIdentifier(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType(
@@ -43,7 +43,7 @@ class MySM2PublicKey(univ.Sequence):
         )
     )
 
-
+# 用来实现MySm类中的相关功能而定义
 class MySM2KeyPair:
     sm2key_pair = [
         ("public_key_hex", str),
@@ -253,20 +253,20 @@ class MySmRemote(object):
 
         self.base_url = "https://101.91.108.14:8867"
 
-        self.enc_app_code = "encrypt"
-        self.enc_tenant_code = "zqyl"
-        self.sign_app_code = "sign"
-        self.sign_tenant_code = "zqyl"
-        self.enc_internal_key_name = "sk_encrypt_sm4"
+        self.enc_app_code = "zpyencrypt"
+        self.enc_tenant_code = "zpy"
+        self.sign_app_code = "zpysign"
+        self.sign_tenant_code = "zpy"
+        self.enc_internal_key_name = "sk_encrypt_sm4_zpy"
 
         self.enc_user_info = {
-            "username": "zqyl@encrypt",
-            "password": "1234Jjm!@"
+            "username": "zpy@zpyencrypt",
+            "password": ")VD2zjV="
         }
 
         self.sign_user_info = {
-            "username": "zqyl@sign",
-            "password": "1234Jjm!@"
+            "username": "zpy@zpysign",
+            "password": ")VD2zjV="
         }
 
         self.token_url = "/ccsp/auth/app/v1/token"
@@ -433,7 +433,7 @@ class MySmRemote(object):
                     return MyConverter.base64_to_string(outData)
                 elif status == "500" and code == "00000002":
                     self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.remote_internal_enc_sm4_ecb(data)
+                    return self.remote_internal_dec_sm4_ecb(data)
                 else:
                     message = str(json_data["message"])
                     return message
@@ -520,7 +520,7 @@ class MySmRemote(object):
                     return outData
                 elif status == "500" and code == "00000002":
                     self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.remote_internal_enc_sm4_ecb(data)
+                    return self.remote_external_enc_sm4_ecb(data, b_key)
                 else:
                     message = str(json_data["message"])
                     return message
@@ -529,7 +529,7 @@ class MySmRemote(object):
         except requests.RequestException as e:
             return str(e)
 
-    def remote_external_enc_sm4_cbc(self, b_data: bytes, b_key: bytes, b_iv: bytes) -> str:
+    def remote_external_enc_sm4_cbc(self, data: str, b_key: bytes, b_iv: bytes) -> str:
         if self.enc_token == "":
             self.get_2_tokens(self.enc_user_info, self.sign_user_info)
 
@@ -547,7 +547,7 @@ class MySmRemote(object):
             "keyValue": MyConverter.bytes_to_base64(b_key),
             "algType": "SGD_SM4_CBC",
             "isEnc": "false",
-            "inData": MyConverter.bytes_to_base64(b_data),
+            "inData": MyConverter.string_to_base64(data),
             "iv": MyConverter.bytes_to_base64(b_iv),
             "paddingType": "PKCS7PADDING"
         }
@@ -564,7 +564,7 @@ class MySmRemote(object):
                     return outData
                 elif status == "500" and code == "00000002":
                     self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.remote_internal_enc_sm4_ecb(data)
+                    return self.remote_external_enc_sm4_cbc(data, b_key, b_iv)
                 else:
                     message = str(json_data["message"])
                     return message
@@ -607,7 +607,7 @@ class MySmRemote(object):
                     return MyConverter.base64_to_string(outData)
                 elif status == "500" and code == "00000002":
                     self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.remote_internal_enc_sm4_ecb(data)
+                    return self.remote_external_dec_sm4_ecb(data, b_key)
                 else:
                     message = str(json_data["message"])
                     return message
@@ -651,7 +651,7 @@ class MySmRemote(object):
                     return MyConverter.base64_to_string(outData)
                 elif status == "500" and code == "00000002":
                     self.get_2_tokens(self.enc_user_info, self.sign_user_info)
-                    return self.remote_internal_enc_sm4_ecb(data)
+                    return self.remote_external_dec_sm4_cbc(data, b_key, b_iv)
                 else:
                     message = str(json_data["message"])
                     return message
